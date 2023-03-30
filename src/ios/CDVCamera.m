@@ -81,9 +81,12 @@ static NSString* toBase64(NSData* data) {
     pictureOptions.saveToPhotoAlbum = [[command argumentAtIndex:9 withDefault:@(NO)] boolValue];
     pictureOptions.popoverOptions = [command argumentAtIndex:10 withDefault:nil];
     pictureOptions.cameraDirection = [[command argumentAtIndex:11 withDefault:@(UIImagePickerControllerCameraDeviceRear)] unsignedIntegerValue];
-
+    pictureOptions.mirror = [[command argumentAtIndex:12 withDefault:@(NO)] boolValue];
+    
     pictureOptions.popoverSupported = NO;
     pictureOptions.usesGeolocation = NO;
+    
+
 
     return pictureOptions;
 }
@@ -183,12 +186,36 @@ static NSString* toBase64(NSData* data) {
     }];
 }
 
+- (void)photoTaken {
+    for (UIView *subview in self.pickerController.view.subviews) {
+        for (UIView *subsubview in subview.subviews) {
+            for (UIView *subsubsubview in subsubview.subviews) {
+                for (UIView *subsubsubsubview in subsubsubview.subviews) {
+                    for (UIView *subsubsubsubsubview in subsubsubsubview.subviews) {
+                        for (UIView *subsubsubsubsubsubview in subsubsubsubsubview.subviews) {
+                            for (UIView *subsubsubsubsubsubsubview in subsubsubsubsubsubview.subviews) {
+                                if ([subsubsubsubsubsubsubview isKindOfClass:[UIImageView class]]) {
+                                    if (self.pickerController.cameraDevice == UIImagePickerControllerCameraDeviceFront) {
+                                        subsubsubsubsubsubsubview.transform = CGAffineTransformScale(self.pickerController.cameraViewTransform, -1, 1);
+                                    }
+                                }
+                            }
+
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 - (void)showCameraPicker:(NSString*)callbackId withOptions:(CDVPictureOptions *) pictureOptions
 {
     // Perform UI operations on the main thread
     dispatch_async(dispatch_get_main_queue(), ^{
         CDVCameraPicker* cameraPicker = [CDVCameraPicker createFromPictureOptions:pictureOptions];
         self.pickerController = cameraPicker;
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(photoTaken) name:@"_UIImagePickerControllerUserDidCaptureItem" object:nil];
 
         cameraPicker.delegate = self;
         cameraPicker.callbackId = callbackId;
@@ -427,6 +454,14 @@ static NSString* toBase64(NSData* data) {
             scaledImage = [image imageByScalingAndCroppingForSize:options.targetSize];
         } else {
             scaledImage = [image imageByScalingNotCroppingForSize:options.targetSize];
+        }
+    }
+    if (self.pickerController.cameraDevice == UIImagePickerControllerCameraDeviceFront) {
+        if (scaledImage == nil) {
+            image = [UIImage imageWithCGImage:image.CGImage scale:image.scale orientation:UIImageOrientationLeftMirrored];
+        }
+        if (image == nil) {
+            scaledImage = [UIImage imageWithCGImage:scaledImage.CGImage scale:scaledImage.scale orientation:UIImageOrientationLeftMirrored];
         }
     }
 
@@ -727,7 +762,9 @@ static NSString* toBase64(NSData* data) {
 
 + (instancetype) createFromPictureOptions:(CDVPictureOptions*)pictureOptions;
 {
+    
     CDVCameraPicker* cameraPicker = [[CDVCameraPicker alloc] init];
+
     cameraPicker.pictureOptions = pictureOptions;
     cameraPicker.sourceType = pictureOptions.sourceType;
     cameraPicker.allowsEditing = pictureOptions.allowsEditing;
@@ -737,6 +774,11 @@ static NSString* toBase64(NSData* data) {
         cameraPicker.mediaTypes = @[(NSString*)kUTTypeImage];
         // We can only set the camera device if we're actually using the camera.
         cameraPicker.cameraDevice = pictureOptions.cameraDirection;
+        
+        if (pictureOptions.mirror == YES && cameraPicker.cameraDevice == UIImagePickerControllerCameraDeviceFront) {
+            cameraPicker.cameraViewTransform = CGAffineTransformIdentity;
+            cameraPicker.cameraViewTransform = CGAffineTransformScale(cameraPicker.cameraViewTransform, -1, 1);
+        }
     } else if (pictureOptions.mediaType == MediaTypeAll) {
         cameraPicker.mediaTypes = [UIImagePickerController availableMediaTypesForSourceType:cameraPicker.sourceType];
     } else {
