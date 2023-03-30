@@ -81,7 +81,6 @@ static NSString* toBase64(NSData* data) {
     pictureOptions.saveToPhotoAlbum = [[command argumentAtIndex:9 withDefault:@(NO)] boolValue];
     pictureOptions.popoverOptions = [command argumentAtIndex:10 withDefault:nil];
     pictureOptions.cameraDirection = [[command argumentAtIndex:11 withDefault:@(UIImagePickerControllerCameraDeviceRear)] unsignedIntegerValue];
-    pictureOptions.mirror = [[command argumentAtIndex:12 withDefault:@(NO)] boolValue];
     
     pictureOptions.popoverSupported = NO;
     pictureOptions.usesGeolocation = NO;
@@ -774,11 +773,6 @@ static NSString* toBase64(NSData* data) {
         cameraPicker.mediaTypes = @[(NSString*)kUTTypeImage];
         // We can only set the camera device if we're actually using the camera.
         cameraPicker.cameraDevice = pictureOptions.cameraDirection;
-        
-        if (pictureOptions.mirror == YES && cameraPicker.cameraDevice == UIImagePickerControllerCameraDeviceFront) {
-            cameraPicker.cameraViewTransform = CGAffineTransformIdentity;
-            cameraPicker.cameraViewTransform = CGAffineTransformScale(cameraPicker.cameraViewTransform, -1, 1);
-        }
     } else if (pictureOptions.mediaType == MediaTypeAll) {
         cameraPicker.mediaTypes = [UIImagePickerController availableMediaTypesForSourceType:cameraPicker.sourceType];
     } else {
