@@ -196,6 +196,9 @@ static NSString* toBase64(NSData* data) {
                                 if ([subsubsubsubsubsubsubview isKindOfClass:[UIImageView class]]) {
                                     if (self.pickerController.cameraDevice == UIImagePickerControllerCameraDeviceFront) {
                                         subsubsubsubsubsubsubview.transform = CGAffineTransformScale(self.pickerController.cameraViewTransform, -1, 1);
+                                        self.flipFinalImage = YES;
+                                    } else {
+                                        self.flipFinalImage = NO;
                                     }
                                 }
                             }
@@ -455,12 +458,12 @@ static NSString* toBase64(NSData* data) {
             scaledImage = [image imageByScalingNotCroppingForSize:options.targetSize];
         }
     }
-    if (self.pickerController.cameraDevice == UIImagePickerControllerCameraDeviceFront) {
+    if (self.flipFinalImage) {
         if (scaledImage == nil) {
-            image = [UIImage imageWithCGImage:image.CGImage scale:image.scale orientation:UIImageOrientationLeftMirrored];
+            image = [UIImage imageWithCGImage:image.CGImage scale:image.scale orientation:UIImageOrientationUpMirrored];
         }
         if (image == nil) {
-            scaledImage = [UIImage imageWithCGImage:scaledImage.CGImage scale:scaledImage.scale orientation:UIImageOrientationLeftMirrored];
+            scaledImage = [UIImage imageWithCGImage:scaledImage.CGImage scale:scaledImage.scale orientation:UIImageOrientationUpMirrored];
         }
     }
 
@@ -534,7 +537,6 @@ static NSString* toBase64(NSData* data) {
 {
     __weak CDVCameraPicker* cameraPicker = (CDVCameraPicker*)picker;
     __weak CDVCamera* weakSelf = self;
-
     dispatch_block_t invoke = ^(void) {
         __block CDVPluginResult* result = nil;
 
