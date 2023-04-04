@@ -89,7 +89,7 @@ typedef NSUInteger CDVMediaType;
 @property (strong) NSMutableDictionary *metadata;
 @property (strong, nonatomic) CLLocationManager *locationManager;
 @property (strong) NSData* data;
-@property (strong) BOOL flipFinalImage;
+@property BOOL flipFinalImage;
 
 /*
  * getPicture
