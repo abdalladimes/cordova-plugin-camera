@@ -81,9 +81,11 @@ static NSString* toBase64(NSData* data) {
     pictureOptions.saveToPhotoAlbum = [[command argumentAtIndex:9 withDefault:@(NO)] boolValue];
     pictureOptions.popoverOptions = [command argumentAtIndex:10 withDefault:nil];
     pictureOptions.cameraDirection = [[command argumentAtIndex:11 withDefault:@(UIImagePickerControllerCameraDeviceRear)] unsignedIntegerValue];
-
+    
     pictureOptions.popoverSupported = NO;
     pictureOptions.usesGeolocation = NO;
+    
+
 
     return pictureOptions;
 }
@@ -183,12 +185,39 @@ static NSString* toBase64(NSData* data) {
     }];
 }
 
+- (void)photoTaken {
+    for (UIView *subview in self.pickerController.view.subviews) {
+        for (UIView *subsubview in subview.subviews) {
+            for (UIView *subsubsubview in subsubview.subviews) {
+                for (UIView *subsubsubsubview in subsubsubview.subviews) {
+                    for (UIView *subsubsubsubsubview in subsubsubsubview.subviews) {
+                        for (UIView *subsubsubsubsubsubview in subsubsubsubsubview.subviews) {
+                            for (UIView *subsubsubsubsubsubsubview in subsubsubsubsubsubview.subviews) {
+                                if ([subsubsubsubsubsubsubview isKindOfClass:[UIImageView class]]) {
+                                    if (self.pickerController.cameraDevice == UIImagePickerControllerCameraDeviceFront) {
+                                        subsubsubsubsubsubsubview.transform = CGAffineTransformScale(self.pickerController.cameraViewTransform, -1, 1);
+                                        self.flipFinalImage = YES;
+                                    } else {
+                                        self.flipFinalImage = NO;
+                                    }
+                                }
+                            }
+
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 - (void)showCameraPicker:(NSString*)callbackId withOptions:(CDVPictureOptions *) pictureOptions
 {
     // Perform UI operations on the main thread
     dispatch_async(dispatch_get_main_queue(), ^{
         CDVCameraPicker* cameraPicker = [CDVCameraPicker createFromPictureOptions:pictureOptions];
         self.pickerController = cameraPicker;
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(photoTaken) name:@"_UIImagePickerControllerUserDidCaptureItem" object:nil];
 
         cameraPicker.delegate = self;
         cameraPicker.callbackId = callbackId;
@@ -429,6 +458,14 @@ static NSString* toBase64(NSData* data) {
             scaledImage = [image imageByScalingNotCroppingForSize:options.targetSize];
         }
     }
+    if (self.flipFinalImage) {
+        if (scaledImage == nil) {
+            image = [UIImage imageWithCGImage:image.CGImage scale:image.scale orientation:UIImageOrientationUpMirrored];
+        }
+        if (image == nil) {
+            scaledImage = [UIImage imageWithCGImage:scaledImage.CGImage scale:scaledImage.scale orientation:UIImageOrientationUpMirrored];
+        }
+    }
 
     return (scaledImage == nil ? image : scaledImage);
 }
@@ -500,7 +537,6 @@ static NSString* toBase64(NSData* data) {
 {
     __weak CDVCameraPicker* cameraPicker = (CDVCameraPicker*)picker;
     __weak CDVCamera* weakSelf = self;
-
     dispatch_block_t invoke = ^(void) {
         __block CDVPluginResult* result = nil;
 
@@ -651,13 +687,15 @@ static NSString* toBase64(NSData* data) {
     CDVPluginResult* result = nil;
 
     if (self.metadata) {
-        CGImageSourceRef sourceImage = CGImageSourceCreateWithData((__bridge CFDataRef)self.data, NULL);
+        NSData* dataCopy = [self.data mutableCopy];
+        CGImageSourceRef sourceImage = CGImageSourceCreateWithData((__bridge CFDataRef)dataCopy, NULL);
         CFStringRef sourceType = CGImageSourceGetType(sourceImage);
 
         CGImageDestinationRef destinationImage = CGImageDestinationCreateWithData((__bridge CFMutableDataRef)self.data, sourceType, 1, NULL);
         CGImageDestinationAddImageFromSource(destinationImage, sourceImage, 0, (__bridge CFDictionaryRef)self.metadata);
         CGImageDestinationFinalize(destinationImage);
 
+        dataCopy = nil;
         CFRelease(sourceImage);
         CFRelease(destinationImage);
     }
@@ -725,7 +763,9 @@ static NSString* toBase64(NSData* data) {
 
 + (instancetype) createFromPictureOptions:(CDVPictureOptions*)pictureOptions;
 {
+    
     CDVCameraPicker* cameraPicker = [[CDVCameraPicker alloc] init];
+
     cameraPicker.pictureOptions = pictureOptions;
     cameraPicker.sourceType = pictureOptions.sourceType;
     cameraPicker.allowsEditing = pictureOptions.allowsEditing;
